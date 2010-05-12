@@ -226,8 +226,20 @@
     // when the loaded track finished playing
     soundcloud.addEventListener('onMediaEnd', function(flashId, data) {
       log('track finished get the next one');
-      if(autoPlay){      
-        $('.sc-trackslist li.active').next('li').click();
+      //if there is a next track, continue
+      next = $('.playing .sc-trackslist li.active').next('li');
+      if (next.html()) {
+        $(next).click();
+      } else {
+        // Hit the end of the set, reset status
+        $('.playing .sc-trackslist li:first').addClass('active').siblings('li').removeClass('active');
+        var player = $('.playing');
+        var track = getPlayerData(player).tracks[0];
+        updateTrackInfo(player, track);
+        updatePlayStatus(player, false);
+        clearInterval(positionPoll);
+        updates.$played.css('width', '0%');
+        updates.position.innerHTML = timecode(0);
       }
     });
     
