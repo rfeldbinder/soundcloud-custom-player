@@ -33,7 +33,7 @@
   
   
   var engineId = 'scPlayerEngine',
-      debug = true,
+      debug = false,
       useSandBox = false,
       log = function(args) {
         if(debug && window.console && window.console.log){
