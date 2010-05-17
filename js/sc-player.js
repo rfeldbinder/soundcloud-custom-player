@@ -236,6 +236,8 @@
         var player = $('.playing');
         var track = getPlayerData(player).tracks[0];
         updateTrackInfo(player, track);
+        // update the next/prev buttons before we change playing status
+        UpdateNextPrevButtons(flashId, data);
         updatePlayStatus(player, false);
         clearInterval(positionPoll);
         updates.$played.css('width', '0%');
@@ -282,7 +284,7 @@
         // adding controls to the player
         $player
           .find('.sc-controls')
-            .append('<a href="#play" class="sc-play">Play</a> <a href="#pause" class="sc-pause hidden">Pause</a>')
+            .append('<a href="#prev" class="sc-prev disabled">Prev</a> <a href="#play" class="sc-play">Play</a> <a href="#pause" class="sc-pause hidden">Pause</a> <a href="#next" class="sc-next">Next</a>')
           .end()
           .append('<a href="#info" class="sc-info-toggle">Info</a>')
           .append('<div class="sc-scrubber"></div>')
@@ -314,6 +316,10 @@
           $player
             .removeClass('loading')
             .trigger('onPlayerInit.scPlayer');
+          // mark the next button disabled if there is only one track
+          if (tracks.length < 2) {
+            $player.find('a.sc-next').toggleClass('disabled', true);
+          }
           
           // update the element before rendering it in the DOM
           $player.each(function() {
@@ -413,7 +419,36 @@
     onSeek($player, relative);
     return false;
   });
-  
+
+  // enable forward and back buttons
+  $('a.sc-next').live('click', function(event) {
+      if (! $(this).hasClass('disabled')) {
+      var parent = $(this).parents('div.sc-player');
+      var next = $(parent).find('.sc-trackslist li.active').next('li');
+      $(next).click();
+      }
+  });
+  $('a.sc-prev').live('click', function(event) {
+      if (! $(this).hasClass('disabled')) {
+      var parent = $(this).parents('div.sc-player');
+      var prev = $(parent).find('.sc-trackslist li.active').prev('li');
+      $(prev).click();
+      }
+  });
+
+  // listen to callbacks to enable/disable next and forward buttons
+  // if we are at the beginning or end of the tracklist.
+  function UpdateNextPrevButtons(flashId, data) {
+     var player = $('div.sc-player.playing');
+     if (player.length) {
+     var next = $(player).find('.sc-trackslist li.active').next('li');
+     $(player).find('a.sc-next').toggleClass('disabled', !next.length);
+     var prev = $(player).find('.sc-trackslist li.active').prev('li');
+     $(player).find('a.sc-prev').toggleClass('disabled', !prev.length);
+     }
+  }
+  soundcloud.addEventListener('onPlayerReady', UpdateNextPrevButtons);
+ 
   
   // -------------------------------------------------------------------
   // the default Auto-Initialization
