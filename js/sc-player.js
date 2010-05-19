@@ -30,8 +30,8 @@
 
     return tc.join('.');
   };
-  
-  
+
+
   var engineId = 'scPlayerEngine',
       debug = false,
       useSandBox = false,
@@ -97,7 +97,7 @@
                 }else if($.isArray(data)){
                   playerObj.tracks = playerObj.tracks.concat(data);
                 }
-                if(links[index]){                    
+                if(links[index]){
                   // if there are more track to load, get them from the api
                   loadUrl(links[index]);
                 }else{
@@ -108,7 +108,7 @@
            };
         // update the players queue
         players.push(playerObj);
-        
+
         // load first tracks
         loadUrl(links[index]);
       },
@@ -133,7 +133,7 @@
         $('.sc-artwork-list li', $player).each(function(index) {
           var $item = $(this),
               itemTrack = $item.data('sc-track');
-          
+
           if (itemTrack === track) {
             // show track artwork
             $item
@@ -150,15 +150,16 @@
         });
         // cache the references to most updated DOM nodes in the progress bar
         updates = {
-          $buffer: $('.sc-buffer', $player), 
-          $played: $('.sc-played', $player), 
+          $buffer: $('.sc-buffer', $player),
+          $played: $('.sc-played', $player),
           position:  $('.sc-position', $player)[0]
         };
         // update the track duration in the progress bar
         $('.sc-duration', $player).html(timecode(track.duration));
         // put the waveform into the progress bar
-        $('.sc-waveform-container', $player).html('<img src="' + track.waveform_url +'" />');
-        
+        var ourWaveform = waveformUrl + track.waveform_url.split('/').pop()
+        $('.sc-waveform-container', $player).html('<img src="' + ourWaveform +'" />');
+
         $player.trigger('onPlayerTrackSwitch.scPlayer', [track]);
       },
       play = function(track) {
@@ -207,9 +208,9 @@
         }
       },
       positionPoll;
-  
+
     // listen to audio engine events
-    
+
     // when the loaded track is ready to play
     soundcloud.addEventListener('onPlayerReady', function(flashId, data) {
       log('onPlayerReady: audio engine is ready', data);
@@ -218,11 +219,11 @@
         audioEngine = soundcloud.getPlayer(engineId);
       }
       // FIXME in the widget the event doesnt get fired after the load()
-      if(autoPlay){      
+      if(autoPlay){
         this.api_play();
       }
     });
-    
+
     // when the loaded track finished playing
     soundcloud.addEventListener('onMediaEnd', function(flashId, data) {
       log('track finished get the next one');
@@ -244,12 +245,12 @@
         updates.position.innerHTML = timecode(0);
       }
     });
-    
+
     // when the loaded track is still buffering
     soundcloud.addEventListener('onMediaBuffering', function(flashId, data) {
       updates.$buffer.css('width', data.percent + '%');
     });
-    
+
     // when the loaded track started to play
     soundcloud.addEventListener('onMediaPlay', function(flashId, data) {
       var duration = audioEngine.api_getTrackDuration() * 1000;
@@ -257,10 +258,10 @@
       positionPoll = setInterval(function() {
         var position = audioEngine.api_getTrackPosition() * 1000;
         updates.$played.css('width', ((position / duration) * 100) + '%');
-        updates.position.innerHTML = timecode(position); 
+        updates.position.innerHTML = timecode(position);
       }, 50);
     });
-    
+
     // when the loaded track is was paused
     soundcloud.addEventListener('onMediaPause', function(flashId, data) {
       clearInterval(positionPoll);
@@ -277,10 +278,11 @@
         $info = $('<div class="sc-info"><h3></h3><h4></h4><p></p><a href="#" class="sc-info-close">X</a></div>').appendTo($player),
         $controls = $('<div class="sc-controls"></div>').appendTo($player),
         $list = $('<ol class="sc-trackslist"></ol>').appendTo($player);
-        
+
         // enable autoplay if set in the options
         autoPlay = opts.autoPlay;
-        
+        waveformUrl = opts.waveformUrl;
+
         // adding controls to the player
         $player
           .find('.sc-controls')
@@ -291,7 +293,7 @@
             .find('.sc-scrubber')
               .append('<div class="sc-time-span"><div class="sc-waveform-container"></div><div class="sc-buffer"></div><div class="sc-played"></div></div>')
               .append('<div class="sc-time-indicators"><span class="sc-position"></span> | <span class="sc-duration"></span></div>');
-        
+
         // load and parse the track data from SoundCloud API
         loadTracksData($player, links);
         // init the player GUI, when the tracks data was laoded
@@ -320,7 +322,7 @@
           if (tracks.length < 2) {
             $player.find('a.sc-next').toggleClass('disabled', true);
           }
-          
+
           // update the element before rendering it in the DOM
           $player.each(function() {
             if($.isFunction(opts.beforeRender)){
@@ -344,7 +346,7 @@
 
     return $player;
   };
-  
+
   // plugin wrapper
   $.fn.scPlayer = function(options) {
     return this.each(function() {
@@ -363,13 +365,14 @@
       $('a.sc-player, div.sc-player').scPlayer();
     },
     autoPlay: false,
+    waveformUrl : 'http://waveforms.soundcloud.com/',
     loadArtworks: 5
   };
-  
-  
+
+
   // the GUI event bindings
   //--------------------------------------------------------
-  
+
   // toggling play/pause
   $('a.sc-play, a.sc-pause').live('click', function(event) {
     var $player = $(this).closest('.sc-player'),
@@ -381,7 +384,7 @@
     }
     return false;
   });
-  
+
   // displaying the info panel in the player
   $('a.sc-info-toggle, a.sc-info-close').live('click', function(event) {
     var $link = $(this);
@@ -408,7 +411,7 @@
     });
     return false;
   });
-  
+
   // seeking in the loaded track buffer
   $('.sc-time-span').live('click', function(event) {
     var $scrubber = $(this),
@@ -427,6 +430,7 @@
       var next = $(parent).find('.sc-trackslist li.active').next('li');
       $(next).click();
       }
+      return false;
   });
   $('a.sc-prev').live('click', function(event) {
       if (! $(this).hasClass('disabled')) {
@@ -434,6 +438,7 @@
       var prev = $(parent).find('.sc-trackslist li.active').prev('li');
       $(prev).click();
       }
+      return false;
   });
 
   // listen to callbacks to enable/disable next and forward buttons
@@ -448,8 +453,8 @@
      }
   }
   soundcloud.addEventListener('onPlayerReady', UpdateNextPrevButtons);
- 
-  
+
+
   // -------------------------------------------------------------------
   // the default Auto-Initialization
   $(function() {
