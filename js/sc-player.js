@@ -30,7 +30,7 @@
 
     return tc.join('.');
   };
-  
+
   var audioEngine = function() {
     var html5AudioAvailable = function() {
         var state = false;
@@ -63,7 +63,7 @@
         $(document).trigger({type: 'scPlayer:onMediaBuffering', percent: percent});
       }
     };
-    
+
     var html5Driver = function() {
       var player = new Audio(),
           onTimeUpdate = function(event){
@@ -79,9 +79,9 @@
                 buffer = ((obj.buffered.length && obj.buffered.end(0)) / obj.duration) * 100;
             callbacks.onBuffer(buffer);
           };
-        
+
       $('<div class="sc-player-engine-container"></div>').appendTo(document.body).append(player);
-      
+
       // prepare the listeners
       player.addEventListener('play', callbacks.onPlay, false);
       player.addEventListener('pause', callbacks.onPause, false);
@@ -89,7 +89,7 @@
       player.addEventListener('timeupdate', onTimeUpdate, false);
       player.addEventListener('progress', onProgress, false);
 
-      
+
       return {
         load: function(track) {
           player.pause();
@@ -116,9 +116,9 @@
       };
 
     };
-    
 
-    
+
+
     var flashDriver = function() {
       var engineId = 'scPlayerEngine',
           player,
@@ -136,29 +136,29 @@
             }
           };
 
-      
-      
+
+
       // listen to audio engine events
       // when the loaded track is ready to play
       soundcloud.addEventListener('onPlayerReady', function(flashId, data) {
         player = soundcloud.getPlayer(engineId);
         callbacks.onReady();
       });
-    
+
       // when the loaded track finished playing
       soundcloud.addEventListener('onMediaEnd', callbacks.onEnd);
-    
+
       // when the loaded track is still buffering
       soundcloud.addEventListener('onMediaBuffering', function(flashId, data) {
         callbacks.onBuffer(data.percent);
       });
-    
+
       // when the loaded track started to play
       soundcloud.addEventListener('onMediaPlay', callbacks.onPlay);
-    
+
       // when the loaded track is was paused
       soundcloud.addEventListener('onMediaPause', callbacks.onPause);
-      
+
       return {
         load: function(track) {
           var url = track.permalink_url;
@@ -186,13 +186,13 @@
         }
       };
     };
-    
+
     return html5AudioAvailable? html5Driver() : flashDriver();
 
   }();
-  
-  
-  
+
+
+
       var debug = false,
       useSandBox = false,
       log = function(args) {
@@ -350,7 +350,7 @@
           var duration = audioEngine.getDuration() * 1000;
           var position = audioEngine.getPosition();
           updates.$played.css('width', ((position / audioEngine.getDuration()) * 100) + '%');
-          updates.position.innerHTML = timecode(position * 1000); 
+          updates.position.innerHTML = timecode(position * 1000);
         }, 50);
       })
       // when the loaded track is was paused
@@ -358,10 +358,24 @@
         clearInterval(positionPoll);
       })
       .bind('scPlayer:onMediaEnd', function(event) {
-        log('track finished get the next one');
-        if(autoPlay){      
-          $('.sc-trackslist li.active').next('li').click();
-        }
+          log('track finished get the next one');
+          //if there is a next track, continue
+          next = $('.playing .sc-trackslist li.active').next('li');
+          if (next.html()) {
+            $(next).click();
+          } else {
+            // Hit the end of the set, reset status
+            $('.playing .sc-trackslist li:first').addClass('active').siblings('li').removeClass('active');
+            var player = $('.playing');
+            var track = getPlayerData(player).tracks[0];
+            updateTrackInfo(player, track);
+            // update the next/prev buttons before we change playing status
+            UpdateNextPrevButtons(flashId, data);
+            updatePlayStatus(player, false);
+            clearInterval(positionPoll);
+            updates.$played.css('width', '0%');
+            updates.position.innerHTML = timecode(0);
+          }
       })
       .bind('scPlayer:onMediaBuffering', function(event) {
         updates.$buffer.css('width', event.percent + '%');
@@ -463,7 +477,7 @@
       $('a.sc-player, div.sc-player').scPlayer();
     },
     autoPlay: false,
-    waveformUrl : 'http://waveforms.soundcloud.com/',
+    waveformUrl : '/sc/waveform/',
     loadArtworks: 5
   };
 
@@ -505,7 +519,7 @@
     });
     return false;
   });
-  
+
   var scrub = function(node, xPos) {
     var $scrubber = $(node).closest('.sc-time-span'),
         $buffer = $scrubber.find('.sc-buffer'),
@@ -521,7 +535,7 @@
       ev.preventDefault();
     }
   };
-  
+
   // seeking in the loaded track buffer
   $('.sc-time-span')
     .live('click', function(event) {
