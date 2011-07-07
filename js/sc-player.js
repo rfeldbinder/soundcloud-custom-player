@@ -32,7 +32,7 @@
   };
   // shuffle the array
   var shuffle = function(arr) {
-    arr.sort(function() { return Math.round(Math.random()); } );
+    arr.sort(function() { return 1 - Math.floor(Math.random() * 3); } );
     return arr;
   };
 
@@ -49,11 +49,26 @@
         }
       },
       domain = useSandBox ? 'sandbox-soundcloud.com' : 'soundcloud.com',
+      secureDocument = (document.location.protocol === 'https:'),
+      // convert a SoundCloud resource URL to an API URL
       scApiUrl = function(url, apiKey) {
-        return (/api\./.test(url) ? url + '?' : 'http://api.' + domain +'/resolve?url=' + url + '&') + 'format=json&consumer_key=' + apiKey +'&callback=?';
+        var resolver = ( secureDocument || (/^https/i).test(url) ? 'https' : 'http') + '://api.' + domain + '/resolve?url=',
+            params = 'format=json&consumer_key=' + apiKey +'&callback=?';
+
+        // force the secure url in the secure environment
+        if( secureDocument ) {
+          url = url.replace(/^http:/, 'https:');
+        }
+
+        // check if it's already a resolved api url
+        if ( (/api\./).test(url) ) {
+          return url + '?' + params;
+        } else {
+          return resolver + url + '&' + params;
+        }
       };
 
-
+  // TODO Expose the audio engine, so it can be unit-tested
   var audioEngine = function() {
     var html5AudioAvailable = function() {
         var state = false;
@@ -116,7 +131,7 @@
       return {
         load: function(track, apiKey) {
           player.pause();
-          player.src = track.stream_url + '?consumer_key=' + apiKey;
+          player.src = track.stream_url + (/\?/.test(track.stream_url) ? '&' : '?') + 'consumer_key=' + apiKey;
           player.load();
           player.play();
         },
@@ -243,7 +258,8 @@
         var index = 0,
             playerObj = {node: $player, tracks: []},
             loadUrl = function(link) {
-              $.getJSON(scApiUrl(link.url, apiKey), function(data) {
+              var apiUrl = scApiUrl(link.url, apiKey);
+              $.getJSON(apiUrl, function(data) {
                 // log('data loaded', link.url, data);
                 index += 1;
                 if(data.tracks){
@@ -254,6 +270,9 @@
                   data.permalink_url = link.url;
                   // if track, add to player
                   playerObj.tracks.push(data);
+                }else if(data.creator){
+                  // it's a group!
+                  links.push({url:data.uri + '/tracks'});
                 }else if(data.username){
                   // if user, get his tracks or favorites
                   if(/favorites/.test(link.url)){
@@ -269,7 +288,7 @@
                   loadUrl(links[index]);
                 }else{
                   // if loading finishes, anounce it to the GUI
-                  playerObj.node.trigger({type:'onTrackDataLoaded.scPlayer', playerObj: playerObj});
+                  playerObj.node.trigger({type:'onTrackDataLoaded', playerObj: playerObj, url: apiUrl});
                 }
              });
            };
@@ -344,7 +363,7 @@
         }
         $(player)
           .toggleClass('playing', status)
-          .trigger((status ? 'onPlayerPlay' : 'onPlayerPause') + '.scPlayer');
+          .trigger((status ? 'onPlayerPlay' : 'onPlayerPause'));
       },
       onPlay = function(player, id) {
         var track = getPlayerData(player).tracks[id || 0];
@@ -510,6 +529,7 @@
               .toggleClass('active', active)
               .data('sc-track', track);
           });
+<<<<<<< HEAD
           $player
             .removeClass('loading')
             .trigger('onPlayerInit.scPlayer');
@@ -519,6 +539,8 @@
             $player.find('a.sc-next').toggleClass('disabled', true);
           }
 
+=======
+>>>>>>> upstream/master
           // update the element before rendering it in the DOM
           $player.each(function() {
             if($.isFunction(opts.beforeRender)){
@@ -530,6 +552,12 @@
           $('.sc-position', $player)[0].innerHTML = timecode(0);
           // set up the first track info
           updateTrackInfo($player, tracks[0]);
+
+          // announce the succesful initialization
+          $player
+            .removeClass('loading')
+            .trigger('onPlayerInit');
+
           // if auto play is enabled and it's the first player, start playing
           if(opts.autoPlay && !didAutoPlay){
             onPlay($player);
@@ -549,6 +577,11 @@
   // stop all players, might be useful, before replacing the player dynamically
   $.scPlayer.stopAll = function() {
     $('.sc-player.playing a.sc-pause').click();
+  };
+
+  // destroy all the players and audio engine, usefull when reloading part of the page and audio has to stop
+  $.scPlayer.destroy = function() {
+    $('.sc-player, .sc-player-engine-container').remove();
   };
 
   // plugin wrapper
