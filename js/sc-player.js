@@ -36,7 +36,7 @@
     return arr;
   };
 
-  var debug = true,
+  var debug = false,
       useSandBox = false,
       $doc = $(document),
       log = function(args) {
